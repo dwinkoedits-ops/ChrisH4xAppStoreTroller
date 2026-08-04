@@ -1,0 +1,89 @@
+name: Build ChrisH4xAppStoreTroller DEB
+
+on:
+  push:
+    branches: [ main, master ]
+  release:
+    types: [ created ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y git curl perl clang lld build-essential libssl-dev libplist-dev xz-utils file
+
+      # ⚡ 1. CACHE : Theos, SDKs & Toolchain
+      - name: Cache Theos, SDKs & Toolchain
+        id: cache-theos
+        uses: actions/cache@v4
+        with:
+          path: ~/theos
+          key: theos-sdks-toolchain-${{ runner.os }}-v8
+
+      # 📦 2. INSTALLATION (seulement si pas de cache)
+      - name: Install Theos, SDKs & Toolchain
+        if: steps.cache-theos.outputs.cache-hit != 'true'
+        run: |
+          echo "⚡ Pas de cache trouvé, installation de Theos..."
+
+          git clone --recursive https://github.com/theos/theos.git $HOME/theos
+          rm -rf $HOME/theos/sdks
+          git clone --depth=1 https://github.com/theos/sdks.git $HOME/theos/sdks
+
+          mkdir -p $HOME/theos/toolchain/linux
+
+          URL="https://github.com/kabiroberai/swift-toolchain-linux/releases/latest/download/swift-5.8-ubuntu22.04.tar.xz"
+          echo "🔍 Téléchargement depuis : $URL"
+          curl -sSLf "$URL" -o toolchain.tar.xz
+
+          echo "📦 Extraction du toolchain..."
+          tar -xf toolchain.tar.xz -C $HOME/theos/toolchain/linux --strip-components=1
+          rm -f toolchain.tar.xz
+
+          if [ ! -f "$HOME/theos/toolchain/linux/iphone/bin/clang" ]; then
+            echo "❌ ERREUR : clang est toujours introuvable."
+            exit 1
+          fi
+
+          echo "✅ Clang trouvé : $HOME/theos/toolchain/linux/iphone/bin/clang"
+
+      # 🔨 3. BUILD ROOTFUL
+      - name: Build Rootful DEB
+        run: |
+          export THEOS=$HOME/theos
+          export PATH=$THEOS/bin:$PATH
+          make clean
+          make package FINALPACKAGE=1
+
+      # 🔨 4. BUILD ROOTLESS
+      - name: Build Rootless DEB
+        run: |
+          export THEOS=$HOME/theos
+          export PATH=$THEOS/bin:$PATH
+          make clean
+          make package FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=rootless
+
+      # 📤 5. UPLOAD des deux .deb en tant qu'artifact GitHub
+      - name: Upload DEB Packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: ChrisH4xAppStoreTroller-DEBs
+          path: packages/*.deb
+          retention-days: 30
+
+      # 🚀 6. Attacher au Release si déclenché par un tag
+      - name: Attach DEBs to Release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: packages/*.deb
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

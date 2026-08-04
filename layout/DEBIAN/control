@@ -1,0 +1,10 @@
+Package: com.chrishax.appStoreTroller
+Name: ChrisH4xAppStoreTroller
+Version: 1.0.0
+Architecture: iphoneos-arm iphoneos-arm64
+Description: Troll the App Store by spoofing your iOS version. Long-press Get/Install to pick any version (1-100). Works on rootful & rootless. Appears in Settings to enable/disable and view install history.
+Maintainer: ChrisH4x <chrishax@example.com>
+Author: ChrisH4x
+Section: Tweaks
+Depends: mobilesubstrate | libhooker | substitute, preferenceloader
+Tag: compatible_min::ios5.0, role::enduser

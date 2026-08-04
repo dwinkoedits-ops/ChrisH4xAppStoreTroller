@@ -1,0 +1,33 @@
+{
+  "minVersion": "0.1",
+  "headerImage": "",
+  "tintColor": "#FF3B30",
+  "tabs": [
+    {
+      "tabname": "Details",
+      "views": [
+        {
+          "class": "DepictionSubheaderView",
+          "title": "ChrisH4xAppStoreTroller",
+          "useBoldText": true,
+          "useBottomMargin": false
+        },
+        {
+          "class": "DepictionMarkdownTextView",
+          "markdown": "## Qu'est-ce que c'est?\n\nTrolle l'App Store en faisant croire que tu as **n'importe quelle version iOS** (1 à 100 max).\n\n## Fonctionnalités\n\n- 🎭 **Spoof la version iOS** retournée à l'App Store\n- 👆 **Long-press 3 secondes** sur *Obtenir / Get / Installer / Avoir* → popup pour taper ta version (ex: 99, 7, 17...)\n- ⚠️ Si l'app nécessite iOS 17 et tu mets 7 → message d'incompatibilité normal\n- 🚫 Limite max: iOS **100** (101+ bloqué)\n- 📋 **Historique** des apps installées avec la version spoofée utilisée\n- ⚙️ **Panel dans Réglages** pour activer/désactiver et voir l'historique\n\n## Compatibilité\n\n- ✅ Rootful & Rootless\n- ✅ ARM & ARM64\n- ✅ iOS 5 → 18\n- ✅ Unc0ver, Checkra1n, Taurine, Palera1n, Dopamine, Freya, etc.\n\n## Comment utiliser\n\n1. Active le tweak dans Réglages → **ChrisH4xAppStoreTroller**\n2. Ouvre l'App Store\n3. Maintiens **3 secondes** le bouton **Obtenir/Get/Installer/Avoir**\n4. Tape ta version iOS souhaitée (ex: `99`)\n5. Appuie sur ✅ Appliquer\n6. Profite!\n\n> ⚠️ Ne tape pas 101 ou plus — bloqué par le tweak.",
+          "useSpacing": true
+        }
+      ]
+    },
+    {
+      "tabname": "Changelog",
+      "views": [
+        {
+          "class": "DepictionMarkdownTextView",
+          "markdown": "## v1.0.0\n- Release initiale\n- Spoof iOS version dans App Store\n- Long-press 3s sur bouton Get/Install\n- Panel Préférences avec historique\n- Rootful + Rootless + ARM + ARM64\n- iOS 5–18",
+          "useSpacing": true
+        }
+      ]
+    }
+  ]
+}

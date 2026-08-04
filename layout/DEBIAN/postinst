@@ -1,0 +1,34 @@
+#!/bin/sh
+# ChrisH4xAppStoreTroller – post-install
+# Détecte automatiquement rootful vs rootless et symlink au bon endroit.
+
+PAYLOAD_DIR="/var/mobile/Library/Application Support/ChrisH4xAppStoreTroller"
+DYLIB="$PAYLOAD_DIR/ChrisH4xAppStoreTroller.dylib"
+PLIST="$PAYLOAD_DIR/ChrisH4xAppStoreTroller.plist"
+
+# ── Détection automatique rootful / rootless ─────────────────────────────────
+if [ -d "/var/jb" ] && [ -f "/var/jb/usr/bin/dpkg" ]; then
+    # Rootless (Palera1n rootless, Dopamine, Freya rootless…)
+    MS_DIR="/var/jb/Library/MobileSubstrate/DynamicLibraries"
+    PREFS_DIR="/var/jb/Library/PreferenceLoader/Preferences"
+    echo "[ChrisH4xAppStoreTroller] Détecté : ROOTLESS → $MS_DIR"
+else
+    # Rootful (Unc0ver, Checkra1n, Taurine, Freya rootful, Palera1n rootful…)
+    MS_DIR="/Library/MobileSubstrate/DynamicLibraries"
+    PREFS_DIR="/Library/PreferenceLoader/Preferences"
+    echo "[ChrisH4xAppStoreTroller] Détecté : ROOTFUL → $MS_DIR"
+fi
+
+# ── Créer les dossiers si besoin ─────────────────────────────────────────────
+mkdir -p "$MS_DIR"
+mkdir -p "$PREFS_DIR"
+
+# ── Symlinks vers le bon MobileSubstrate ────────────────────────────────────
+ln -sf "$DYLIB" "$MS_DIR/ChrisH4xAppStoreTroller.dylib"
+ln -sf "$PLIST" "$MS_DIR/ChrisH4xAppStoreTroller.plist"
+
+# ── Tuer les processus App Store pour appliquer le hook ──────────────────────
+killall -9 "App Store" MobileStorePurchaseService com.apple.appstored storedownloadd 2>/dev/null
+
+echo "[ChrisH4xAppStoreTroller] ✅ Installé avec succès !"
+exit 0

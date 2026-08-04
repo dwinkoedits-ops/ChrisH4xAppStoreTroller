@@ -1,0 +1,18 @@
+#!/bin/sh
+# ChrisH4xAppStoreTroller – pre-remove
+# Supprime les symlinks des deux emplacements (rootful ET rootless) pour être sûr.
+
+echo "[ChrisH4xAppStoreTroller] Suppression des symlinks..."
+
+# Rootful
+rm -f "/Library/MobileSubstrate/DynamicLibraries/ChrisH4xAppStoreTroller.dylib"
+rm -f "/Library/MobileSubstrate/DynamicLibraries/ChrisH4xAppStoreTroller.plist"
+
+# Rootless
+rm -f "/var/jb/Library/MobileSubstrate/DynamicLibraries/ChrisH4xAppStoreTroller.dylib"
+rm -f "/var/jb/Library/MobileSubstrate/DynamicLibraries/ChrisH4xAppStoreTroller.plist"
+
+killall -9 "App Store" MobileStorePurchaseService 2>/dev/null
+
+echo "[ChrisH4xAppStoreTroller] 🗑️ Désinstallé. Ta vraie version iOS est de retour."
+exit 0

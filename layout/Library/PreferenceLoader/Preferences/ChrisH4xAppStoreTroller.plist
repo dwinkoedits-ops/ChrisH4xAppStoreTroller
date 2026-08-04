@@ -1,0 +1,1 @@
+{ entry = { bundle = "ChrisH4xAppStoreTrollerPrefs"; cell = PSLinkCell; detail = CHXPreferencesController; icon = "ChrisH4xIcon.png"; isController = 1; label = "ChrisH4xAppStoreTroller"; }; }
