@@ -28,7 +28,11 @@
     self.title = @"ChrisH4xAppStoreTroller";
     [self loadPrefs];
     self.tableView.separatorStyle  = UITableViewCellSeparatorStyleSingleLine;
+    if (@available(iOS 13.0, *)) {
     self.tableView.backgroundColor = [UIColor systemGroupedBackgroundColor];
+} else {
+    self.tableView.backgroundColor = [UIColor groupTableViewBackgroundColor];
+}
 
     UIBarButtonItem *about = [[UIBarButtonItem alloc]
         initWithTitle:@"ℹ️" style:UIBarButtonItemStylePlain
@@ -125,7 +129,11 @@
                 UITableViewCell *cell = [[UITableViewCell alloc]
                     initWithStyle:UITableViewCellStyleDefault reuseIdentifier:@"empty"];
                 cell.textLabel.text = @"Aucune app installée pour l'instant 🕳️";
-                cell.textLabel.textColor = [UIColor secondaryLabelColor];
+                if (@available(iOS 13.0, *)) {
+    cell.textLabel.textColor = [UIColor secondaryLabelColor];
+} else {
+    cell.textLabel.textColor = [UIColor grayColor];
+}
                 cell.textLabel.font = [UIFont italicSystemFontOfSize:14];
                 cell.selectionStyle = UITableViewCellSelectionStyleNone;
                 return cell;
