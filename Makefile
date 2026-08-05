@@ -1,4 +1,3 @@
-export THEOS_PACKAGE_SCHEME = rootful
 ARCHS = armv7 armv7s
 # On baisse le target pour correspondre aux appareils 32 bits (iOS 10 maximum en général)
 TARGET := iphone:clang:latest:10.0
