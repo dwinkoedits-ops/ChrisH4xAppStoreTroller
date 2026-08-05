@@ -134,9 +134,9 @@ static NSString *currentBundleID = nil;
     %orig;
     if (!tweakEnabled) return;
 
-    for (UIGestureRecognizer *gr in self.gestureRecognizers) {
+        for (UIGestureRecognizer *gr in self.gestureRecognizers) {
         if ([gr isKindOfClass:[UILongPressGestureRecognizer class]] &&
-            gr.minimumPressDuration == 3.0) return;
+            ((UILongPressGestureRecognizer *)gr).minimumPressDuration == 3.0) return;
     }
 
     UILongPressGestureRecognizer *lp = [[UILongPressGestureRecognizer alloc]
