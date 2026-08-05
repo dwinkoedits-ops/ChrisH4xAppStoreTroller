@@ -1,1 +1,9 @@
-{ Filter = { Bundles = ( "com.apple.AppStore", "com.apple.MobileStorePurchaseService", "com.apple.storedownloadd", "com.apple.appstored" ); }; }
+{
+    Filter = {
+        Bundles = (
+            "com.apple.AppStore",
+            "com.apple.appstored",
+            "com.apple.itunesstored"
+        );
+    };
+}

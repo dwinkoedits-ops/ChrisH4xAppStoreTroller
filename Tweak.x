@@ -1,20 +1,33 @@
 #import <UIKit/UIKit.h>
 
-// Variables globales
 static BOOL tweakEnabled = YES;
 static BOOL isSpoofingActive = NO;
+#define PREF_PATH @"/var/mobile/Library/Preferences/com.chrish4x.appstoretroller.plist"
 
-// Recharger les préférences (compatible Rootless/Rootful sans chemin absolu)
+// --- GESTION DES PARAMÈTRES GLOBAUX ---
 static void loadPreferences() {
-    NSUserDefaults *prefs = [[NSUserDefaults alloc] initWithSuiteName:@"com.chrish4x.appstoretroller"];
-    if ([prefs objectForKey:@"isEnabled"]) {
-        tweakEnabled = [prefs boolForKey:@"isEnabled"];
+    NSDictionary *prefs = [NSDictionary dictionaryWithContentsOfFile:PREF_PATH];
+    if (prefs) {
+        tweakEnabled = prefs[@"isEnabled"] ? [prefs[@"isEnabled"] boolValue] : YES;
+        isSpoofingActive = prefs[@"isSpoofingActive"] ? [prefs[@"isSpoofingActive"] boolValue] : NO;
     } else {
-        tweakEnabled = YES; // Activé par défaut
+        tweakEnabled = YES;
+        isSpoofingActive = NO;
     }
 }
 
-// Fonction pour afficher le Toast
+// Sauvegarde l'état pour que les daemons (appstored) puissent le lire
+static void setSpoofingState(BOOL active) {
+    isSpoofingActive = active;
+    NSMutableDictionary *prefs = [NSMutableDictionary dictionaryWithContentsOfFile:PREF_PATH] ?: [NSMutableDictionary dictionary];
+    [prefs setObject:@(active) forKey:@"isSpoofingActive"];
+    [prefs writeToFile:PREF_PATH atomically:YES];
+    
+    // Prévient tous les processus Apple que la version a "changé"
+    CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(), CFSTR("com.chrish4x.appstoretroller/ReloadPrefs"), NULL, NULL, true);
+}
+
+// --- AFFICHAGE DU TOAST ---
 static void showChrisH4xToast(NSString *message) {
     dispatch_async(dispatch_get_main_queue(), ^{
         UIWindow *window = [UIApplication sharedApplication].keyWindow;
@@ -32,7 +45,6 @@ static void showChrisH4xToast(NSString *message) {
         
         [window addSubview:toastLabel];
         
-        // Animation d'apparition et disparition
         [UIView animateWithDuration:0.5 animations:^{
             toastLabel.alpha = 1.0;
         } completion:^(BOOL finished) {
@@ -45,12 +57,10 @@ static void showChrisH4xToast(NSString *message) {
     });
 }
 
-// --- HOOKS DE SPOOFING ---
+// --- HOOKS DE SPOOFING (S'applique à l'App Store ET aux Daemons) ---
 %hook UIDevice
 - (NSString *)systemVersion {
-    if (tweakEnabled && isSpoofingActive) {
-        return @"99.0";
-    }
+    if (tweakEnabled && isSpoofingActive) return @"99.0";
     return %orig;
 }
 %end
@@ -65,14 +75,12 @@ static void showChrisH4xToast(NSString *message) {
     return %orig;
 }
 - (NSString *)operatingSystemVersionString {
-    if (tweakEnabled && isSpoofingActive) {
-        return @"Version 99.0 (Build 99A999)";
-    }
+    if (tweakEnabled && isSpoofingActive) return @"Version 99.0 (Build 99A999)";
     return %orig;
 }
 %end
 
-// --- INTERCEPTION DE L'ALERTE DE COMPATIBILITÉ ---
+// --- INTERCEPTION DE L'ALERTE ---
 %hook UIViewController
 
 - (void)presentViewController:(UIViewController *)viewControllerToPresent animated:(BOOL)flag completion:(void (^)(void))completion {
@@ -81,47 +89,43 @@ static void showChrisH4xToast(NSString *message) {
         return;
     }
 
-    // On vérifie si c'est une alerte de l'App Store
     if ([viewControllerToPresent isKindOfClass:[UIAlertController class]]) {
         UIAlertController *alert = (UIAlertController *)viewControllerToPresent;
-        NSString *message = alert.message.lowercaseString;
         
-        // Mots-clés pour détecter l'erreur d'iOS non compatible (marche en FR et EN)
-        if (message && [message containsString:@"ios"] && ([message containsString:@"requiert"] || [message containsString:@"requires"])) {
+        NSString *title = alert.title ? alert.title.lowercaseString : @"";
+        NSString *message = alert.message ? alert.message.lowercaseString : @"";
+        
+        // Détection ultra-agressive adaptée à iOS 12
+        if ([message containsString:@"ios"] || [title containsString:@"ios"] || [message containsString:@"version"] || [message containsString:@"compatible"]) {
             
-            // On bloque l'alerte originale et on crée la nôtre
             UIAlertController *trollAlert = [UIAlertController alertControllerWithTitle:@"ChrisH4xAppStoreTroller" 
-                                                                                message:@"Cette app n'est pas compatible avec ta version d'iOS.\nVeux-tu tromper l'App Store en simulant iOS 99 ?" 
+                                                                                message:@"L'App Store tente de bloquer cette app.\nForcer l'installation en simulant iOS 99 ?" 
                                                                          preferredStyle:UIAlertControllerStyleAlert];
             
             UIAlertAction *acceptAction = [UIAlertAction actionWithTitle:@"Accepter" style:UIAlertActionStyleDefault handler:^(UIAlertAction * action) {
-                // On active le spoof
-                isSpoofingActive = YES;
-                
+                // On active le mode iOS 99 pour tout le système App Store
+                setSpoofingState(YES);
                 showChrisH4xToast(@"MERCI D'AVOIR UTILISE ChrisH4xAppStoreTroller");
                 
-                // Note : On prévient l'utilisateur qu'il doit recliquer
                 dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-                    showChrisH4xToast(@"Appuie à nouveau sur le nuage !");
+                    showChrisH4xToast(@"Retouche le nuage pour télécharger !");
                 });
             }];
             
             UIAlertAction *refuseAction = [UIAlertAction actionWithTitle:@"Refuser" style:UIAlertActionStyleCancel handler:^(UIAlertAction * action) {
-                // On laisse l'alerte d'erreur native s'afficher
-                isSpoofingActive = NO;
+                setSpoofingState(NO);
+                // On laisse l'alerte normale s'afficher
                 %orig(viewControllerToPresent, flag, completion);
             }];
             
             [trollAlert addAction:acceptAction];
             [trollAlert addAction:refuseAction];
             
-            // On affiche notre alerte modifiée à la place
             %orig(trollAlert, flag, completion);
             return;
         }
     }
     
-    // Si c'est autre chose qu'une erreur de compatibilité, on laisse passer
     %orig;
 }
 
@@ -130,6 +134,5 @@ static void showChrisH4xToast(NSString *message) {
 // --- INITIALISATION ---
 %ctor {
     loadPreferences();
-    // Écoute les changements dans les réglages pour activer/désactiver à la volée
     CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), NULL, (CFNotificationCallback)loadPreferences, CFSTR("com.chrish4x.appstoretroller/ReloadPrefs"), NULL, CFNotificationSuspensionBehaviorCoalesce);
 }
