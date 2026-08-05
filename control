@@ -7,9 +7,6 @@ Maintainer: ChrisH4x <chrisedouardo999@gmail.com>
 Author: ChrisH4x
 Section: Tweaks
 Depends: mobilesubstrate | libhooker | substitute, preferenceloader
-Conflicts:
-Replaces:
-Installed-Size: 200
 Homepage: https://github.com/dwinkoedits-ops/ChrisH4xAppStoreTroller
 Depiction: https://github.com/dwinkoedits-ops/ChrisH4xAppStoreTroller
 Tag: compatible_min::ios5.0, role::enduser
