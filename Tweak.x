@@ -5,41 +5,32 @@
  *  Spoof iOS version in App Store to bypass minimum requirements.
  *  Long-press 3s on Get/Install/Obtenir to pick a custom iOS version (1–100).
  *  Works on rootful & rootless, ARM & ARM64, iOS 5–18.
- *  Compatible with Unc0ver, Checkra1n, Taurine, Palera1n, Dopamine, Freya, etc.
+ *  Compatible avec Unc0ver, Checkra1n, Taurine, Palera1n, Dopamine, Freya, etc.
  */
 
 #import <UIKit/UIKit.h>
 #import <Foundation/Foundation.h>
 #import <CoreFoundation/CoreFoundation.h>
 
-// ─── Interface declarations (fixes forward-declaration errors) ────────────────
+// ─── Interface declarations ───────────────────────────────────────────────────
 
-// SKUIButton extends UIButton — gives us titleForState:, gestureRecognizers, etc.
-@interface SKUIButton : UIButton
-@end
-
-// SKUIItemStateAction — App Store buy/download action
 @interface SKUIItemStateAction : NSObject
 - (void)perform;
 @end
 
-// SKUIItemPageViewController — product detail page
 @interface SKUIItemPageViewController : UIViewController
 - (id)valueForKey:(NSString *)key;
 @end
 
-// SSProduct — App Store product model
 @interface SSProduct : NSObject
 - (id)valueForKey:(NSString *)key;
 @end
 
-// SSSystemVersionController — version reporting inside StoreServices
 @interface SSSystemVersionController : NSObject
 + (NSString *)systemVersion;
 - (NSString *)systemVersion;
 @end
 
-// MSPurchaseParameters — purchase request payload
 @interface MSPurchaseParameters : NSObject
 - (id)initWithDictionary:(NSDictionary *)dict;
 @end
@@ -65,7 +56,6 @@ static void loadPrefs(void) {
     }
 }
 
-// Plain C callback — required with ARC (blocks cannot be cast to C fn pointers)
 static void prefsChangedCallback(CFNotificationCenterRef center __unused,
                                  void *observer              __unused,
                                  CFStringRef name            __unused,
@@ -135,31 +125,37 @@ static void showVersionPicker(UIView *sourceView, void (^onChosen)(NSInteger));
 %end
 
 
-// ─── SKUIButton long-press ────────────────────────────────────────────────────
+// ─── UIButton long-press (attrape SKUIButton, SKUIPurchaseButton, etc.) ───────
 
 static NSString *currentAppName  = nil;
 static NSString *currentBundleID = nil;
 
-%hook SKUIButton
+static BOOL isTriggerTitle(NSString *title) {
+    if (!title || title.length == 0) return NO;
+    NSArray *triggers = @[
+        @"get", @"install", @"obtenir", @"acheter",
+        @"installer", @"avoir", @"获取", @"安装", @"入手",
+        @"télécharger", @"telecharger", @"open", @"update"
+    ];
+    NSString *lower = title.lowercaseString;
+    for (NSString *t in triggers) {
+        if ([lower isEqualToString:t]) return YES;
+    }
+    return NO;
+}
+
+%hook UIButton
 
 - (void)didMoveToSuperview {
     %orig;
     if (!tweakEnabled) return;
+    if (!self.superview) return;
 
-    // Match all localised variants of the "Get/Install" button
     NSString *title = [self titleForState:UIControlStateNormal];
-    NSArray  *triggers = @[@"Get", @"Install", @"Obtenir", @"Acheter",
-                            @"Installer", @"Avoir", @"获取", @"安装", @"入手"];
-    BOOL matches = NO;
-    for (NSString *t in triggers) {
-        if ([title caseInsensitiveCompare:t] == NSOrderedSame) { matches = YES; break; }
-    }
-    if (!matches) return;
+    if (!isTriggerTitle(title)) return;
 
-    // Don't add twice
-    for (UIGestureRecognizer *gr in self.gestureRecognizers) {
+    for (UIGestureRecognizer *gr in self.gestureRecognizers)
         if ([gr isKindOfClass:[UILongPressGestureRecognizer class]]) return;
-    }
 
     UILongPressGestureRecognizer *lp = [[UILongPressGestureRecognizer alloc]
         initWithTarget:self action:@selector(chx_longPressGetButton:)];
@@ -170,7 +166,6 @@ static NSString *currentBundleID = nil;
 %new
 - (void)chx_longPressGetButton:(UILongPressGestureRecognizer *)sender {
     if (sender.state != UIGestureRecognizerStateBegan) return;
-    // Cast self to UIView* — SKUIButton IS a UIView, safe cast
     showVersionPicker((UIView *)self, ^(NSInteger chosen) {
         fakeVersion = chosen;
         NSMutableDictionary *prefs = [NSMutableDictionary dictionaryWithContentsOfFile:PREFS_PATH]
@@ -325,7 +320,7 @@ static void showVersionPicker(UIView *sourceView __unused, void (^onChosen)(NSIn
         CFNotificationCenterAddObserver(
             CFNotificationCenterGetDarwinNotifyCenter(),
             NULL,
-            prefsChangedCallback,       // plain C function — ARC safe ✅
+            prefsChangedCallback,
             CFSTR(NOTIF_RELOAD),
             NULL,
             CFNotificationSuspensionBehaviorDeliverImmediately
