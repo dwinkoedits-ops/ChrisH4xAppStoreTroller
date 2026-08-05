@@ -1,11 +1,6 @@
 /*
  *  ChrisH4xAppStoreTroller
  *  By ChrisH4x
- *
- *  Spoof iOS version in App Store to bypass minimum requirements.
- *  Long-press 3s on Get/Install/Obtenir to pick a custom iOS version (1–100).
- *  Works on rootful & rootless, ARM & ARM64, iOS 5–18.
- *  Compatible avec Unc0ver, Checkra1n, Taurine, Palera1n, Dopamine, Freya, etc.
  */
 
 #import <UIKit/UIKit.h>
@@ -13,6 +8,9 @@
 #import <CoreFoundation/CoreFoundation.h>
 
 // ─── Interface declarations ───────────────────────────────────────────────────
+
+@interface ASKSingleComponentOfferButton : UIButton
+@end
 
 @interface SKUIItemStateAction : NSObject
 - (void)perform;
@@ -125,37 +123,21 @@ static void showVersionPicker(UIView *sourceView, void (^onChosen)(NSInteger));
 %end
 
 
-// ─── UIButton long-press (attrape SKUIButton, SKUIPurchaseButton, etc.) ───────
+// ─── ASKSingleComponentOfferButton long-press ────────────────────────────────
 
 static NSString *currentAppName  = nil;
 static NSString *currentBundleID = nil;
 
-static BOOL isTriggerTitle(NSString *title) {
-    if (!title || title.length == 0) return NO;
-    NSArray *triggers = @[
-        @"get", @"install", @"obtenir", @"acheter",
-        @"installer", @"avoir", @"获取", @"安装", @"入手",
-        @"télécharger", @"telecharger", @"open", @"update"
-    ];
-    NSString *lower = title.lowercaseString;
-    for (NSString *t in triggers) {
-        if ([lower isEqualToString:t]) return YES;
-    }
-    return NO;
-}
+%hook ASKSingleComponentOfferButton
 
-%hook UIButton
-
-- (void)didMoveToSuperview {
+- (void)layoutSubviews {
     %orig;
     if (!tweakEnabled) return;
-    if (!self.superview) return;
 
-    NSString *title = [self titleForState:UIControlStateNormal];
-    if (!isTriggerTitle(title)) return;
-
-    for (UIGestureRecognizer *gr in self.gestureRecognizers)
-        if ([gr isKindOfClass:[UILongPressGestureRecognizer class]]) return;
+    for (UIGestureRecognizer *gr in self.gestureRecognizers) {
+        if ([gr isKindOfClass:[UILongPressGestureRecognizer class]] &&
+            gr.minimumPressDuration == 3.0) return;
+    }
 
     UILongPressGestureRecognizer *lp = [[UILongPressGestureRecognizer alloc]
         initWithTarget:self action:@selector(chx_longPressGetButton:)];
@@ -166,6 +148,13 @@ static BOOL isTriggerTitle(NSString *title) {
 %new
 - (void)chx_longPressGetButton:(UILongPressGestureRecognizer *)sender {
     if (sender.state != UIGestureRecognizerStateBegan) return;
+
+    if (@available(iOS 10.0, *)) {
+        UIImpactFeedbackGenerator *gen = [[UIImpactFeedbackGenerator alloc]
+            initWithStyle:UIImpactFeedbackStyleMedium];
+        [gen impactOccurred];
+    }
+
     showVersionPicker((UIView *)self, ^(NSInteger chosen) {
         fakeVersion = chosen;
         NSMutableDictionary *prefs = [NSMutableDictionary dictionaryWithContentsOfFile:PREFS_PATH]
@@ -186,48 +175,41 @@ static void showVersionPicker(UIView *sourceView __unused, void (^onChosen)(NSIn
 
     UIAlertController *alert = [UIAlertController
         alertControllerWithTitle:@"🎭 ChrisH4xAppStoreTroller"
-        message:@"Choisir ta fausse version iOS\n(1 → 100 max. 101+ bloqué 🚫)"
+        message:@"Choisir ta fausse version iOS\n(1 → 100 max)"
         preferredStyle:UIAlertControllerStyleAlert];
 
     [alert addTextFieldWithConfigurationHandler:^(UITextField *tf) {
-        tf.placeholder    = [NSString stringWithFormat:@"Actuel: %ld (défaut: 99)", (long)fakeVersion];
-        tf.keyboardType   = UIKeyboardTypeNumberPad;
-        tf.text           = [NSString stringWithFormat:@"%ld", (long)fakeVersion];
+        tf.placeholder  = [NSString stringWithFormat:@"Actuel: %ld (défaut: 99)", (long)fakeVersion];
+        tf.keyboardType = UIKeyboardTypeNumberPad;
+        tf.text         = [NSString stringWithFormat:@"%ld", (long)fakeVersion];
     }];
 
     UIAlertAction *ok = [UIAlertAction actionWithTitle:@"✅ Appliquer"
         style:UIAlertActionStyleDefault handler:^(UIAlertAction *a) {
-        NSString *text = alert.textFields.firstObject.text;
-        NSInteger v    = [text integerValue];
+        NSInteger v = [alert.textFields.firstObject.text integerValue];
 
         if (v < 1 || v > MAX_FAKE_VERSION) {
             UIAlertController *err = [UIAlertController
                 alertControllerWithTitle:@"🚫 Limite dépassée"
-                message:[NSString stringWithFormat:
-                    @"La version max est iOS %d.\nTu as tapé: %ld", MAX_FAKE_VERSION, (long)v]
+                message:[NSString stringWithFormat:@"Max iOS %d. T'as tapé: %ld", MAX_FAKE_VERSION, (long)v]
                 preferredStyle:UIAlertControllerStyleAlert];
-            [err addAction:[UIAlertAction actionWithTitle:@"OK"
-                style:UIAlertActionStyleDefault handler:nil]];
+            [err addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
             [root presentViewController:err animated:YES completion:nil];
             return;
         }
 
         if (onChosen) onChosen(v);
 
-        NSString *msg = [NSString stringWithFormat:
-            @"Version iOS spoofée: %ld.0 ✅\nRelance l'App Store si besoin.", (long)v];
         UIAlertController *done = [UIAlertController
             alertControllerWithTitle:@"ChrisH4xAppStoreTroller"
-            message:msg preferredStyle:UIAlertControllerStyleAlert];
-        [done addAction:[UIAlertAction actionWithTitle:@"Top 🔥"
-            style:UIAlertActionStyleDefault handler:nil]];
+            message:[NSString stringWithFormat:@"Version iOS spoofée: %ld.0 ✅", (long)v]
+            preferredStyle:UIAlertControllerStyleAlert];
+        [done addAction:[UIAlertAction actionWithTitle:@"Top 🔥" style:UIAlertActionStyleDefault handler:nil]];
         [root presentViewController:done animated:YES completion:nil];
     }];
 
-    UIAlertAction *cancel = [UIAlertAction actionWithTitle:@"Annuler"
-        style:UIAlertActionStyleCancel handler:nil];
     [alert addAction:ok];
-    [alert addAction:cancel];
+    [alert addAction:[UIAlertAction actionWithTitle:@"Annuler" style:UIAlertActionStyleCancel handler:nil]];
     [root presentViewController:alert animated:YES completion:nil];
 }
 
@@ -240,9 +222,9 @@ static void showVersionPicker(UIView *sourceView __unused, void (^onChosen)(NSIn
     %orig;
     if (!tweakEnabled) return;
     @try {
-        id item          = [self valueForKey:@"_item"];
-        currentAppName   = [item valueForKey:@"name"]   ?: [item valueForKey:@"title"];
-        currentBundleID  = [item valueForKey:@"bundleIdentifier"];
+        id item         = [self valueForKey:@"_item"];
+        currentAppName  = [item valueForKey:@"name"] ?: [item valueForKey:@"title"];
+        currentBundleID = [item valueForKey:@"bundleIdentifier"];
     } @catch (...) {}
 }
 
@@ -269,9 +251,7 @@ static void showVersionPicker(UIView *sourceView __unused, void (^onChosen)(NSIn
 %hook SKUIItemStateAction
 
 - (void)perform {
-    if (tweakEnabled && currentAppName) {
-        saveHistory(currentAppName, currentBundleID);
-    }
+    if (tweakEnabled && currentAppName) saveHistory(currentAppName, currentBundleID);
     %orig;
 }
 
