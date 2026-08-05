@@ -1,23 +1,37 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
-  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>CFBundleDevelopmentRegion</key>
-    <string>French</string>
-    <key>CFBundleExecutable</key>
-    <string>ChrisH4xAppStoreTrollerPrefs</string>
-    <key>CFBundleIdentifier</key>
-    <string>com.chrishax.appStoreTrollerPrefs</string>
-    <key>CFBundleName</key>
-    <string>ChrisH4xAppStoreTroller</string>
-    <key>CFBundlePackageType</key>
-    <string>BNDL</string>
-    <key>CFBundleShortVersionString</key>
-    <string>1.0.0</string>
-    <key>CFBundleVersion</key>
-    <string>1</string>
-    <key>NSPrincipalClass</key>
-    <string>CHXPreferencesController</string>
+	<key>items</key>
+	<array>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>Paramètres Généraux</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<true/>
+			<key>defaults</key>
+			<string>com.chrish4x.appstoretroller</string>
+			<key>key</key>
+			<string>isEnabled</string>
+			<key>label</key>
+			<string>Activer le Tweak</string>
+			<key>PostNotification</key>
+			<string>com.chrish4x.appstoretroller/ReloadPrefs</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>footerText</key>
+			<string>Développé par ChrisH4x. Laisse l'App Store faire son job, ce tweak interviendra uniquement si l'app bloque ton installation.</string>
+		</dict>
+	</array>
+	<key>title</key>
+	<string>AppStoreTroller</string>
 </dict>
 </plist>
