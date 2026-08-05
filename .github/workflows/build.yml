@@ -55,6 +55,9 @@ jobs:
 
           echo "✅ Clang trouvé : $HOME/theos/toolchain/linux/iphone/bin/clang"
 
+      - name: Fix script permissions
+        run: chmod 755 layout/DEBIAN/postinst layout/DEBIAN/prerm
+
       # 🔨 3. BUILD ROOTFUL
       - name: Build Rootful DEB
         run: |
