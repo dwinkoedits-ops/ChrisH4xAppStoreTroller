@@ -3,7 +3,8 @@
         Bundles = (
             "com.apple.AppStore",
             "com.apple.appstored",
-            "com.apple.itunesstored"
+            "com.apple.itunesstored",
+            "com.apple.springboard"
         );
     };
 }

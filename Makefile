@@ -1,9 +1,8 @@
-# Décommente cette ligne si tu veux forcer la compilation Rootless par défaut
-# THEOS_PACKAGE_SCHEME = rootless
-
-ARCHS = arm64 arm64e
-TARGET := iphone:clang:latest:12.0
-INSTALL_TARGET_PROCESSES = AppStore Preferences
+export THEOS_PACKAGE_SCHEME = rootful
+ARCHS = armv7 armv7s
+# On baisse le target pour correspondre aux appareils 32 bits (iOS 10 maximum en général)
+TARGET := iphone:clang:latest:10.0
+INSTALL_TARGET_PROCESSES = AppStore Preferences SpringBoard
 
 include $(THEOS)/makefiles/common.mk
 

@@ -4,7 +4,7 @@ static BOOL tweakEnabled = YES;
 static BOOL isSpoofingActive = NO;
 #define PREF_PATH @"/var/mobile/Library/Preferences/com.chrish4x.appstoretroller.plist"
 
-// --- GESTION DES PARAMÈTRES GLOBAUX ---
+// --- GESTION DES PARAMÈTRES ---
 static void loadPreferences() {
     NSDictionary *prefs = [NSDictionary dictionaryWithContentsOfFile:PREF_PATH];
     if (prefs) {
@@ -16,14 +16,11 @@ static void loadPreferences() {
     }
 }
 
-// Sauvegarde l'état pour que les daemons (appstored) puissent le lire
 static void setSpoofingState(BOOL active) {
     isSpoofingActive = active;
     NSMutableDictionary *prefs = [NSMutableDictionary dictionaryWithContentsOfFile:PREF_PATH] ?: [NSMutableDictionary dictionary];
     [prefs setObject:@(active) forKey:@"isSpoofingActive"];
     [prefs writeToFile:PREF_PATH atomically:YES];
-    
-    // Prévient tous les processus Apple que la version a "changé"
     CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(), CFSTR("com.chrish4x.appstoretroller/ReloadPrefs"), NULL, NULL, true);
 }
 
@@ -57,7 +54,7 @@ static void showChrisH4xToast(NSString *message) {
     });
 }
 
-// --- HOOKS DE SPOOFING (S'applique à l'App Store ET aux Daemons) ---
+// --- HOOKS DE SPOOFING ---
 %hook UIDevice
 - (NSString *)systemVersion {
     if (tweakEnabled && isSpoofingActive) return @"99.0";
@@ -80,9 +77,8 @@ static void showChrisH4xToast(NSString *message) {
 }
 %end
 
-// --- INTERCEPTION DE L'ALERTE ---
+// --- INTERCEPTION ALERTE MODERNE (UIAlertController) ---
 %hook UIViewController
-
 - (void)presentViewController:(UIViewController *)viewControllerToPresent animated:(BOOL)flag completion:(void (^)(void))completion {
     if (!tweakEnabled) {
         %orig;
@@ -91,30 +87,20 @@ static void showChrisH4xToast(NSString *message) {
 
     if ([viewControllerToPresent isKindOfClass:[UIAlertController class]]) {
         UIAlertController *alert = (UIAlertController *)viewControllerToPresent;
-        
-        NSString *title = alert.title ? alert.title.lowercaseString : @"";
         NSString *message = alert.message ? alert.message.lowercaseString : @"";
         
-        // Détection ultra-agressive adaptée à iOS 12
-        if ([message containsString:@"ios"] || [title containsString:@"ios"] || [message containsString:@"version"] || [message containsString:@"compatible"]) {
+        if ([message containsString:@"ios"] || [message containsString:@"version"] || [message containsString:@"requiert"] || [message containsString:@"compatible"]) {
             
             UIAlertController *trollAlert = [UIAlertController alertControllerWithTitle:@"ChrisH4xAppStoreTroller" 
-                                                                                message:@"L'App Store tente de bloquer cette app.\nForcer l'installation en simulant iOS 99 ?" 
+                                                                                message:@"Alerte interceptée !\nForcer l'installation en simulant iOS 99 ?" 
                                                                          preferredStyle:UIAlertControllerStyleAlert];
             
             UIAlertAction *acceptAction = [UIAlertAction actionWithTitle:@"Accepter" style:UIAlertActionStyleDefault handler:^(UIAlertAction * action) {
-                // On active le mode iOS 99 pour tout le système App Store
                 setSpoofingState(YES);
                 showChrisH4xToast(@"MERCI D'AVOIR UTILISE ChrisH4xAppStoreTroller");
-                
-                dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-                    showChrisH4xToast(@"Retouche le nuage pour télécharger !");
-                });
             }];
-            
             UIAlertAction *refuseAction = [UIAlertAction actionWithTitle:@"Refuser" style:UIAlertActionStyleCancel handler:^(UIAlertAction * action) {
                 setSpoofingState(NO);
-                // On laisse l'alerte normale s'afficher
                 %orig(viewControllerToPresent, flag, completion);
             }];
             
@@ -125,13 +111,53 @@ static void showChrisH4xToast(NSString *message) {
             return;
         }
     }
+    %orig;
+}
+%end
+
+// --- INTERCEPTION ALERTE ANCIENNE iOS 12 (UIAlertView) ---
+%hook UIAlertView
+- (void)show {
+    if (!tweakEnabled) {
+        %orig;
+        return;
+    }
+    
+    NSString *message = self.message ? self.message.lowercaseString : @"";
+    if ([message containsString:@"ios"] || [message containsString:@"version"] || [message containsString:@"requiert"] || [message containsString:@"compatible"]) {
+        
+        // On bloque l'affichage de la vieille alerte et on lance notre UI moderne
+        dispatch_async(dispatch_get_main_queue(), ^{
+            UIAlertController *trollAlert = [UIAlertController alertControllerWithTitle:@"ChrisH4xAppStoreTroller" 
+                                                                                message:@"Alerte système interceptée !\nForcer l'installation en simulant iOS 99 ?" 
+                                                                         preferredStyle:UIAlertControllerStyleAlert];
+            
+            UIAlertAction *acceptAction = [UIAlertAction actionWithTitle:@"Accepter" style:UIAlertActionStyleDefault handler:^(UIAlertAction * action) {
+                setSpoofingState(YES);
+                showChrisH4xToast(@"MERCI D'AVOIR UTILISE ChrisH4xAppStoreTroller");
+            }];
+            
+            UIAlertAction *refuseAction = [UIAlertAction actionWithTitle:@"Refuser" style:UIAlertActionStyleCancel handler:^(UIAlertAction * action) {
+                setSpoofingState(NO);
+                %orig; // Affiche l'alerte d'origine si on refuse
+            }];
+            
+            [trollAlert addAction:acceptAction];
+            [trollAlert addAction:refuseAction];
+            
+            UIViewController *rootVC = [UIApplication sharedApplication].keyWindow.rootViewController;
+            if (rootVC.presentedViewController) {
+                rootVC = rootVC.presentedViewController;
+            }
+            [rootVC presentViewController:trollAlert animated:YES completion:nil];
+        });
+        return;
+    }
     
     %orig;
 }
-
 %end
 
-// --- INITIALISATION ---
 %ctor {
     loadPreferences();
     CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), NULL, (CFNotificationCallback)loadPreferences, CFSTR("com.chrish4x.appstoretroller/ReloadPrefs"), NULL, CFNotificationSuspensionBehaviorCoalesce);
