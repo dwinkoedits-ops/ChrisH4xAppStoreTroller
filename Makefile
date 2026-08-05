@@ -10,7 +10,7 @@ else
 endif
 
 TARGET := iphone:clang:latest:5.0
-ARCHS  := arm arm64
+ARCHS  := armv7 arm64
 
 include $(THEOS)/makefiles/common.mk
 
